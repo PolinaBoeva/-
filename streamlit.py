@@ -124,9 +124,9 @@ if st.session_state.uploaded_file is not None:
                     return f'Температура {temperature}°C аномальная'
                 else:
                     return f'Температура {temperature}°C находится в пределах нормы'
-            check_is_anomaly = check_weather_anomaly(df_city, current_season, temperature)   
-            st.write(check_is_anomaly)
-
+            if temperature is not None:
+                check_is_anomaly = check_weather_anomaly(df_city, current_season, temperature)   
+                st.write(check_is_anomaly)
         else:
             st.warning("Пожалуйста, введите ваш API-ключ для получения текущей температуры.")
 
