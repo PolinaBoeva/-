@@ -25,7 +25,6 @@ if uploaded_file is not None:
 if st.session_state.uploaded_file is not None:
     df = pd.read_csv(st.session_state.uploaded_file, encoding='utf-8')
     def create_column(df):
-        start_time = time.time()
         df.sort_values(by='timestamp', inplace=True)
         df['moving_average'] = df.groupby('city')['temperature'].transform(lambda x: x.rolling(window=30).mean())
         df['moving_std'] = df.groupby('city')['temperature'].transform(lambda x: x.rolling(window=30).std())
@@ -46,7 +45,6 @@ if st.session_state.uploaded_file is not None:
             trend_results.append((city, trend))
      
         trend_df = pd.DataFrame(trend_results, columns=['city', 'trend_value'])
-        print(f"Время выполнения: {time.time() - start_time} секунд")
         df.set_index('timestamp', inplace=True)
         return df, trend_df, season_stats
 
