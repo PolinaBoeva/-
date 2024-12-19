@@ -184,27 +184,26 @@ if st.session_state.uploaded_file is not None:
 
     # Сезонные профили с указанием среднего и стандартного отклонения
     def mean_temperature_by_season(df):
-        seasonal_mean = df.groupby('season')['moving_average'].mean()
-        seasonal_std = df.groupby('season')['moving_average'].std()
-
         season_order = ['winter', 'spring', 'summer', 'autumn']
-        seasonal_mean = seasonal_mean[season_order]
-        seasonal_std = seasonal_std[season_order]
-
+        df['season'] = pd.Categorical(df['season'], categories=season_order, ordered=True)
+        df = df.sort_values('season')
+     
         plt.figure(figsize=(10, 6))
-
-        plt.fill_between(seasonal_mean.index, seasonal_mean - seasonal_std, seasonal_mean + seasonal_std,
-                        color='lightblue', alpha=0.5, label='Стандартное отклонение')
-
-        plt.plot(seasonal_mean.index, seasonal_mean, marker='o', label='Средняя температура', color='orange')
-
+     
+        plt.fill_between(df['season'], df['season_mean_temperature'] - 2*df['season_std_temperature'],
+                          df['season_mean_temperature'] + 2*df['season_std_temperature'],
+                          color='lightblue', alpha=0.5, label='Стандартное отклонение')
+     
+        plt.plot(df['season'], df['season_mean_temperature'], marker='o', label='Средняя температура', color='orange')
+     
         plt.title(f'Сезонные профили с указанием среднего и стандартного отклонения' + (f' для города {city}' if city else ''))
         plt.xlabel('Сезон')
         plt.ylabel('Температура°C')
         plt.grid(True)
         plt.legend()
-
+     
         plt.tight_layout()
+
         st.pyplot(plt) 
 
     mean_temperature_by_season(season_stats)
