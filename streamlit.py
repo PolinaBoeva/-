@@ -24,30 +24,33 @@ if uploaded_file is not None:
 
 if st.session_state.uploaded_file is not None:
     df = pd.read_csv(st.session_state.uploaded_file, encoding='utf-8')
-    def create_column(df):
-        df.sort_values(by='timestamp', inplace=True)
-        df['moving_average'] = df.groupby('city')['temperature'].transform(lambda x: x.rolling(window=30).mean())
-        df['moving_std'] = df.groupby('city')['temperature'].transform(lambda x: x.rolling(window=30).std())
-        df['is_anomaly'] = (df['temperature'] > (df['moving_average'] + 2 * df['moving_std'])) | \
-                        (df['temperature'] < (df['moving_average'] - 2 * df['moving_std']))
-        df['season_mean_temperature'] = df.groupby(['city', 'season'])['temperature'].transform('mean')
-        df['season_std_temperature'] = df.groupby(['city', 'season'])['temperature'].transform('std')
+def create_column(df):
+    start_time = time.time()
+    df.sort_values(by='timestamp', inplace=True)
+    df['moving_average'] = df.groupby('city')['temperature'].transform(lambda x: x.rolling(window=30).mean())
+    df['moving_std'] = df.groupby('city')['temperature'].transform(lambda x: x.rolling(window=30).std())
+    df['is_anomaly'] = (df['temperature'] > (df['moving_average'] + 2 * df['moving_std'])) | \
+                       (df['temperature'] < (df['moving_average'] - 2 * df['moving_std']))
+    season_stats = pd.DataFrame()
+    season_stats['season_mean_temperature'] = df.groupby(['city', 'season'])['temperature'].mean()
+    season_stats['season_std_temperature'] = df.groupby(['city', 'season'])['temperature'].std()
+    season_stats = season_stats.reset_index()
+    # Подсчёт тренда для каждого города с помощью линейной регрессии
+    trend_results = []
+    for city in df['city'].unique():
+        X = np.arange(len(df[df['city'] == city])).reshape(-1, 1)
+        y = df[df['city'] == city]['temperature']
+        model = LinearRegression()
+        model.fit(X, y)
+        trend = model.coef_[0]
+        trend_results.append((city, trend))
 
-        # Подсчёт тренда для каждого города с помощью линейной регрессии
-        trend_results = []
-        for city in df['city'].unique():
-            X = np.arange(len(df[df['city'] == city])).reshape(-1, 1)
-            y = df[df['city'] == city]['temperature']
-            model = LinearRegression()
-            model.fit(X, y)
-            trend = model.coef_[0] 
-            trend_results.append((city, trend))
-        trend_df = pd.DataFrame(trend_results, columns=['city', 'trend_value'])
-        df = pd.merge(df, trend_df, on='city', how='left')
-        df.set_index('timestamp', inplace=True)
-        return df
+    trend_df = pd.DataFrame(trend_results, columns=['city', 'trend_value'])
+    print(f"Время выполнения: {time.time() - start_time} секунд")
+    df.set_index('timestamp', inplace=True)
+    return df, trend_df, season_stats
 
-    df = create_column(df)
+    df, trend_df, season_stats = create_column(df)
 
     col1, col2 = st.columns(2)
 
@@ -116,9 +119,9 @@ if st.session_state.uploaded_file is not None:
             current_season = get_current_season(current_month)
 
             def check_weather_anomaly(df_city, current_season, temperature):
-                season_mean_temp = df_city[df_city['season'] == current_season]['season_mean_temperature'].mean()
-                season_std_temp = df_city[df_city['season'] == current_season]['season_std_temperature'].mean()
-
+                season_mean_temp = season_stats[(season_stats['city'] == city) & (season_stats['season'] == current_season)]['season_mean_temperature'].mean()
+                season_std_temp = season_stats[(season_stats['city'] == city) & (season_stats['season'] == current_season)]['season_std_temperature'].mean()
+               
                 if (temperature > (season_mean_temp + 2 * season_std_temp)) or \
                 (temperature < (season_mean_temp - 2 * season_std_temp)):
                     return f'Температура {temperature}°C аномальная'
@@ -137,7 +140,7 @@ if st.session_state.uploaded_file is not None:
         else:
             return f'На основании коэффициента линейной регрессии можно сделать вывод о долгосрочном отрицательном тренде температуры в городе {city}'
     
-    res_trend = get_trend_info(df_city)
+    res_trend = get_trend_info(trend_df)
     st.write(res_trend)
 
     st.subheader(f"Описательные статистики переменных для {city}")
@@ -204,4 +207,4 @@ if st.session_state.uploaded_file is not None:
         plt.tight_layout()
         st.pyplot(plt) 
 
-    mean_temperature_by_season(df_city)
+    mean_temperature_by_season(season_stats)
