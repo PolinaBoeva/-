@@ -24,31 +24,31 @@ if uploaded_file is not None:
 
 if st.session_state.uploaded_file is not None:
     df = pd.read_csv(st.session_state.uploaded_file, encoding='utf-8')
-def create_column(df):
-    start_time = time.time()
-    df.sort_values(by='timestamp', inplace=True)
-    df['moving_average'] = df.groupby('city')['temperature'].transform(lambda x: x.rolling(window=30).mean())
-    df['moving_std'] = df.groupby('city')['temperature'].transform(lambda x: x.rolling(window=30).std())
-    df['is_anomaly'] = (df['temperature'] > (df['moving_average'] + 2 * df['moving_std'])) | \
-                       (df['temperature'] < (df['moving_average'] - 2 * df['moving_std']))
-    season_stats = pd.DataFrame()
-    season_stats['season_mean_temperature'] = df.groupby(['city', 'season'])['temperature'].mean()
-    season_stats['season_std_temperature'] = df.groupby(['city', 'season'])['temperature'].std()
-    season_stats = season_stats.reset_index()
-    # Подсчёт тренда для каждого города с помощью линейной регрессии
-    trend_results = []
-    for city in df['city'].unique():
-        X = np.arange(len(df[df['city'] == city])).reshape(-1, 1)
-        y = df[df['city'] == city]['temperature']
-        model = LinearRegression()
-        model.fit(X, y)
-        trend = model.coef_[0]
-        trend_results.append((city, trend))
-
-    trend_df = pd.DataFrame(trend_results, columns=['city', 'trend_value'])
-    print(f"Время выполнения: {time.time() - start_time} секунд")
-    df.set_index('timestamp', inplace=True)
-    return df, trend_df, season_stats
+    def create_column(df):
+        start_time = time.time()
+        df.sort_values(by='timestamp', inplace=True)
+        df['moving_average'] = df.groupby('city')['temperature'].transform(lambda x: x.rolling(window=30).mean())
+        df['moving_std'] = df.groupby('city')['temperature'].transform(lambda x: x.rolling(window=30).std())
+        df['is_anomaly'] = (df['temperature'] > (df['moving_average'] + 2 * df['moving_std'])) | \
+                            (df['temperature'] < (df['moving_average'] - 2 * df['moving_std']))
+        season_stats = pd.DataFrame()
+        season_stats['season_mean_temperature'] = df.groupby(['city', 'season'])['temperature'].mean()
+        season_stats['season_std_temperature'] = df.groupby(['city', 'season'])['temperature'].std()
+        season_stats = season_stats.reset_index()
+         # Подсчёт тренда для каждого города с помощью линейной регрессии
+        trend_results = []
+        for city in df['city'].unique():
+            X = np.arange(len(df[df['city'] == city])).reshape(-1, 1)
+            y = df[df['city'] == city]['temperature']
+            model = LinearRegression()
+            model.fit(X, y)
+            trend = model.coef_[0]
+            trend_results.append((city, trend))
+     
+        trend_df = pd.DataFrame(trend_results, columns=['city', 'trend_value'])
+        print(f"Время выполнения: {time.time() - start_time} секунд")
+        df.set_index('timestamp', inplace=True)
+        return df, trend_df, season_stats
 
     df, trend_df, season_stats = create_column(df)
 
