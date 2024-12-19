@@ -54,14 +54,16 @@ def create_column(df):
 
     col1, col2 = st.columns(2)
 
-    # В первом столбце форма для ввода API-ключа
+    # В первом столбце выпадающий список для выбора города форма для ввода API-ключа
     with col1:
         cities = df['city'].unique()
         city = st.selectbox("Выберите город", cities)
         df_city = df[df['city'] == city]
+        trend_df = trend_df[trend_df['city'] == city]
+        season_stats = season_stats[season_stats['city'] == city]
 
 
-    # Во втором столбце выпадающий список для выбора города
+    # Во втором столбце форма для ввода API-ключа
     with col2:
         api_key = st.text_input("Введите ваш API-ключ OpenWeatherMap", type="password")
 
